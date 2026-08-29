@@ -111,7 +111,7 @@ local-deploy-skill:
         family: local
         owner: charly-local
         description: |-
-            MUST be invoked before any work involving: `target: local` deployments, the Ansible-style `host:` destination field (literal `local` for direct shell, anything else routes through ssh(1) reading `~/.ssh/config` + ssh-agent), the `local:` substrate kind and its `from:` template reference, the `user:` and `ssh_args:` Ansible-shaped overrides, the managed `~/.config/charly/ssh_config` fragment, the install ledger at `~/.config/opencharly/installed/`, ReverseOp teardown, or the `--with-services`/`--allow-repo-changes`/`--allow-root-tasks` gates.
+            MUST be invoked before any work involving: `target: local` deployments, the Ansible-style `host:` destination field (literal `local` for direct shell, anything else routes through ssh(1) reading `~/.ssh/config` + ssh-agent), the `local:` substrate kind and its `from:` template reference, the `user:` and `ssh_arg:` Ansible-shaped overrides, the managed `~/.config/charly/ssh_config` fragment, the install ledger at `~/.config/opencharly/installed/`, ReverseOp teardown, or the `--with-services`/`--allow-repo-changes`/`--allow-root-tasks` gates.
         triggers:
             - "local-target deploy / `target: local` / `host: local` (default) / SSH-host deploys / `user:` / `ssh_arg:`"
             - "Managed `~/.config/charly/ssh_config` fragment / `charly vm create` writes Host stanza"
@@ -239,7 +239,7 @@ local-deploy-skill:
                 host: localhost
             ```
 
-            ## `user:` and `ssh_args:` — Ansible-style overrides
+            ## `user:` and `ssh_arg:` — Ansible-style overrides
 
             Two pass-through fields mirror Ansible's per-host overrides:
 
@@ -254,17 +254,18 @@ local-deploy-skill:
                 host: workshop-laptop.lan
                 user: alice
 
-            # ssh_args: passes options through to ssh(1) (Ansible's
+            # ssh_arg: passes options through to ssh(1) (Ansible's
             # ansible_ssh_extra_args). Use sparingly — ssh-config Host stanzas are
-            # the right home for persistent options. ssh_args is a list, so it lives
-            # in its own child node.
+            # the right home for persistent options. The key is SINGULAR `ssh_arg`
+            # (Go: SSHArgs) and, like every collection, it lives INLINE in the kind
+            # value — the named child-node shape was removed by the schema-compaction
+            # cutover and now fails with "no kind discriminator".
             via-bastion:
               local:
                 from: dev-workstation
                 host: target.internal
                 user: ops
-              via-bastion-ssh_args:
-                ssh_args:
+                ssh_arg:
                   - "-o"
                   - "ProxyJump=ops@bastion.example.com"
             ```
@@ -300,7 +301,7 @@ local-deploy-skill:
 
             - `from: <name>` (inside the `local:` node) references a `kind: local` template that exists.
             - `host:` field, when non-`local`, parses via `ParseSSHTarget`.
-            - `user:` and `ssh_args:` only meaningful when `host:` is non-`local` (otherwise error).
+            - `user:` and `ssh_arg:` only meaningful when `host:` is non-`local` (otherwise error).
             - `user:` redundancy: when `host: <inline>@<machine>` and `user:` are both set with different values, error.
 
             ## Cross-References
@@ -315,7 +316,7 @@ local-deploy-skill:
 
             ## When to Use This Skill
 
-            **MUST be invoked** when the task involves `target: local`, the Ansible-style `host:` field, the `user:`/`ssh_args:` overrides, the managed ssh-config fragment, the install ledger, or ReverseOp teardown. Invoke this skill BEFORE reading Go source or launching Explore agents.
+            **MUST be invoked** when the task involves `target: local`, the Ansible-style `host:` field, the `user:`/`ssh_arg:` overrides, the managed ssh-config fragment, the install ledger, or ReverseOp teardown. Invoke this skill BEFORE reading Go source or launching Explore agents.
 local-spec-skill:
     skill:
         name: local-spec
@@ -330,7 +331,7 @@ local-spec-skill:
 
             ## Overview
 
-            `kind: local` declares a reusable candy-stack template that gets applied to a Linux filesystem (deployed by a `local:` deploy whose `from:` field selects this template). Unlike `kind: pod` / `kind: vm` / `kind: kubernetes` which wrap an image, a `kind: local` is defined entirely by its `layers` + `install_opts` + `env` — there's no OCI artifact backing it. The convention file is `local.yml`; templates may also be authored inline in `charly.yml` as top-level name-first nodes (`<name>: { local: {…} }`).
+            `kind: local` declares a reusable candy-stack template that gets applied to a Linux filesystem (deployed by a `local:` deploy whose `from:` field selects this template). Unlike `kind: pod` / `kind: vm` / `kind: kubernetes` which wrap an image, a `kind: local` is defined entirely by its `candy` + `install_opts` + `env` — there's no OCI artifact backing it. The convention file is `local.yml`; templates may also be authored inline in `charly.yml` as top-level name-first nodes (`<name>: { local: {…} }`).
 
             Legacy `kind: host` projects migrate via `charly migrate`.
 
@@ -390,7 +391,7 @@ local-spec-skill:
 
             | Field | Required | Description |
             |---|---|---|
-            | `layers` | Yes | Ordered candy stack. `[]` permitted as a placeholder (warning, not error). |
+            | `candy` | Yes | Ordered candy stack (the key is `candy`, not `layers`). `[]` permitted as a placeholder (warning, not error). |
             | `install_opts` | No | Default install gates. Deployment overrides merge on top. |
             | `env` | No | Shell-profile env vars as a `{KEY: value}` map. Deployment env wins on key collision. |
             | `description` | No | Plain string — the profile's purpose; first line = the summary. |
@@ -407,8 +408,10 @@ local-spec-skill:
 
             Test-bed image preflight is the **check entry point's** job, not the
             deploy's. When `charly check run --on-host <name>` resolves to a host
-            target, the runner walks the bed's plan steps, collects every distinct
-            step `pod:` value plus the bed's target image, and ensures each
+            target, the runner walks the bed's plan steps, collects each step's
+            venue (derived from its position in the fleet tree — the per-step `pod:`
+            field is RETIRED and authoring it is a closed-schema rejection) plus the
+            bed's target image, and ensures each
             image is present in local podman storage (LocalImageExists →
             `charly box pull` → fall back to `charly box build` for short names that
             resolve via `cfg.Images`). Operators who never run `charly check run`
@@ -430,8 +433,8 @@ local-spec-skill:
 
             | Field | Template provides | Deployment overrides | CLI overrides | Effective value |
             |---|---|---|---|---|
-            | `layers` | base list | — | — | `template.Layers` |
-            | `add_layers` | — | extra list | `--add-candy` | `deployment.AddCandies ++ CLI.AddCandy` |
+            | `candy` | base list | — | — | `template.Layers` |
+            | `add_candy` | — | extra list | `--add-candy` | `deployment.AddCandies ++ CLI.AddCandy` |
             | effective layer order | — | — | — | `template.Layers ++ deployment.AddCandies ++ CLI.AddCandy` |
             | `install_opts.*` (bool) | default | wins over template | wins over both | CLI > deployment > template |
             | `install_opts.builder_image` | default `""` | wins | wins over both | CLI > deployment > template |
