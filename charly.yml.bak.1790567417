@@ -1,5 +1,7 @@
+version: 2026.249.2125
 charly-local:
     candy:
+        version: 2026.218.1200
         description: |-
             Concept candy owning the charly-local kind-authoring skills (local templates + ssh-host targets). Owns its family's `skill:` kind entities (sibling nodes in this file) — the
             the plugins→candies migration; candy/plugin-marketplace regenerates the marketplace
@@ -21,6 +23,7 @@ local-deploy-skill:
         owner: charly-local
         description: |-
             `target: local` deployments, the Ansible-style `host:` destination field (literal `local` for direct shell, anything else routes through ssh(1) reading `~/.ssh/config` + ssh-agent), the `local:` substrate kind and its `from:` template reference, the `user:`/`ssh_arg:` overrides, the managed ssh_config fragment, the install ledger, ReverseOp teardown, or the `--with-services`/`--allow-repo-changes`/`--allow-root-tasks` gates.
+
         triggers:
             - "local-target deploy / `target: local` / `host: local` (default) / SSH-host deploys / `user:` / `ssh_arg:`"
             - "Managed `~/.config/charly/ssh_config` fragment / `charly vm create` writes Host stanza"
@@ -233,6 +236,7 @@ local-spec-skill:
         owner: charly-local
         description: |-
             Authoring `kind: local` templates, `local.yml` files, inline `kind: local` template nodes in `charly.yml`, or the merge semantics between a `kind: local` template and the deploy that deploys it.
+
         triggers:
             - "Editing `local.yml` / authoring `kind: local` templates"
         content: |
