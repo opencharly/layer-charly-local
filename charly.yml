@@ -1,37 +1,19 @@
 charly-local:
     candy:
         description: |-
-            Concept candy owning the charly-local kind-authoring skills (local templates + ssh-host targets). Owns its family's `skill:` kind entities (sibling nodes in this file) — the
-            the plugins→candies migration; candy/plugin-marketplace regenerates the marketplace
-            corpus (the standalone opencharly/marketplace repo) from them.
+            Drained concept candy — kept only so this repo still validates as a project while
+            it awaits retirement (opencharly/opencharly#600). It owns NO `skill:` entity any
+            more: under AGENTS.md Part II #5 the 2 `local` family skills moved,
+            byte-identically, to the repositories that hold the code, plugin or config each one
+            documents — `plugin-deploy-local`, `spec`.
+            Nothing is authored here now.
         plan:
-            - run: this documentation-only candy ships no install content (it carries the family's skill/hook/marketplace entities); validate-satisfying no-op
+            - run: this documentation-only candy ships no install content (it carried the family's skill entities); validate-satisfying no-op
               command: "true"
               context:
                 - build
-            - check: the local concept candy's skill entities are present and generated into the marketplace's local/skills
-              id: charly-local-present
+            - check: no-op — this drained candy declares no skill node; every local-family skill lives in the repo that holds the entity it documents
+              id: charly-local-drained
               context:
                 - build
               command: "true"
-local-deploy-skill:
-    skill:
-        name: local-deploy
-        family: local
-        owner: charly-local
-        description: |-
-            `target: local` deployments, the Ansible-style `host:` destination field (literal `local` for direct shell, anything else routes through ssh(1) reading `~/.ssh/config` + ssh-agent), the `local:` substrate kind and its `from:` template reference, the `user:`/`ssh_arg:` overrides, the managed ssh_config fragment, the install ledger, ReverseOp teardown, or the `--with-services`/`--allow-repo-changes`/`--allow-root-tasks` gates.
-
-        triggers:
-            - "local-target deploy / `target: local` / `host: local` (default) / SSH-host deploys / `user:` / `ssh_arg:`"
-            - "Managed `~/.config/charly/ssh_config` fragment / `charly vm create` writes Host stanza"
-local-spec-skill:
-    skill:
-        name: local-spec
-        family: local
-        owner: charly-local
-        description: |-
-            Authoring `kind: local` templates, `local.yml` files, inline `kind: local` template nodes in `charly.yml`, or the merge semantics between a `kind: local` template and the deploy that deploys it.
-
-        triggers:
-            - "Editing `local.yml` / authoring `kind: local` templates"
